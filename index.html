@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Greenhouse</title>
+    <!-- Import the component -->
+   <script type="text/javascript" src="/plugins/vue.min.js"></script>
+     <!-- <script src="../plugins/jquery.min.js"></script> -->
+    <script crossorigin type="module" src="/plugins/model-viewer.min.js"></script>
+</head>
+<body>
+
+    <template id="Hotspot-Panel-Tpl">
+        <div class="hotspot-panel-container">
+            <div class="hotspot-list"  v-if="hotspots.length" >
+                <div class="hotspot-block" 
+                    v-for="(htp, idx) of hotspots" 
+                    :active="idx === activeIndex" 
+                    :key="htp.sid" 
+                    @click="selectHotspot($event, htp, idx)"
+                >
+                    <div class="hotspot-title" v-show="htp.title" v-html="htp.title"></div>
+                    <div :class="{'hotspot-content' : true}">
+                        <div class="hotspot-desc" v-if="htp.description" v-html="htp.description"></div>
+                        <ul class="device-data-list" v-if="htp.eui && htp.deviceData">
+                            <li class="device-attr">
+                                <span class="m-name">Device Eui</span> 
+                                <span class="m-value">{{htp.eui}}</span>
+                            </li>
+                            <li class="device-attr" :update-time="'Updated At : '+ new Date(mitem.time).toLocaleString()" v-for="mitem of htp.deviceData" :key="mitem.measurement_id">
+                                <span class="m-name">{{mitem.measurement_en_name}}</span>
+                                <span class="m-value">{{mitem.measurement_value}}</span>
+                                <span class="m-unit">{{mitem.measurement_unit}}</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <!-- <div class="close-panel">
+                <svg t="1662998424162" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2504" width="200" height="200"><path d="M512 83.2c-234.666667 0-426.666667 192-426.666667 426.666667s192 426.666667 426.666667 426.666666 426.666667-192 426.666667-426.666666-192-426.666667-426.666667-426.666667z m0 810.666667c-211.2 0-384-172.8-384-384s172.8-384 384-384 384 172.8 384 384c0 213.333333-172.8 384-384 384z" p-id="2505" fill="#ffffff"></path><path d="M674.133333 345.6c-8.533333-8.533333-21.333333-8.533333-29.866666 0l-134.4 134.4-134.4-134.4c-8.533333-8.533333-21.333333-8.533333-29.866667 0-8.533333 8.533333-8.533333 21.333333 0 29.866667l134.4 134.4-134.4 134.4c-8.533333 8.533333-8.533333 21.333333 0 29.866666 4.266667 4.266667 10.666667 6.4 14.933333 6.4 6.4 0 10.666667-2.133333 14.933334-6.4l136.533333-134.4 134.4 134.4c4.266667 4.266667 10.666667 6.4 14.933333 6.4 6.4 0 10.666667-2.133333 14.933334-6.4 8.533333-8.533333 8.533333-21.333333 0-29.866666l-134.4-134.4 134.4-134.4c6.4-8.533333 6.4-21.333333-2.133334-29.866667z" p-id="2506" fill="#ffffff"></path></svg>
+            </div> -->
+        </div>
+    </template>
+
+    <div id="app" v-cloak>
+        <model-viewer :id="modelViewId"
+        src="/model/gh.min.glb" 
+        :camera-controls="enableCameraControl"
+        :enable-pan="enablePan"
+        :disable-zoom="disableZoom"
+        shadow-intensity="1.5" exposure="1"
+        :interaction-prompt="enableInteractionPrompt ? 'auto' : 'none'"
+        min-camera-orbit="auto auto -0.5m" 
+        :interpolation-decay="interpolationDecay"
+        :auto-rotate="enableAutoRotate"
+        rotation-per-second="2deg"
+        >
+            <button class="Hotspot" 
+                v-if="visibleHotspots" 
+                v-for="(htp, idx) of hotspots" 
+                :slot="'hotspot-'+ htp.sid"  
+                :ref="'hotspot-'+ htp.sid"
+                :data-position="htp.position" 
+                :data-visibility-attribute="htp.visible"
+                @click="handleClickHotspot($event, htp, idx)"
+                :class="{'Hostspot' : true, 'active': idx === activeSpot }"
+            >
+                <div class="HotspotAnnotation">
+                    <div class="hotspot-side" v-if="visibleSideBtn" :open="visibleHotspotPanel" @click="togglePanel"><svg t="1662998583892" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1435" width="200" height="200"><path d="M128 128h768a42.666667 42.666667 0 0 1 42.666667 42.666667v682.666666a42.666667 42.666667 0 0 1-42.666667 42.666667H128a42.666667 42.666667 0 0 1-42.666667-42.666667V170.666667a42.666667 42.666667 0 0 1 42.666667-42.666667z m256 85.333333v597.333334h469.333333V213.333333H384z" p-id="1436"></path></svg></div>
+                    <div class="hotspot-title" v-show="htp.title" v-html="htp.title"></div>
+                    <div :class="{'hotspot-content' : true, 'active': idx === activeSpot }">
+                        <div class="hotspot-desc" v-if="htp.description" v-html="htp.description"></div>
+                        <ul class="device-data-list" v-if="htp.eui && htp.deviceData">
+                            <!-- <li class="device-attr">
+                                <span class="m-name">Device Eui</span> 
+                                <span class="m-value">{{htp.eui}}</span>
+                            </li> -->
+                            <li class="device-attr" :update-time="'Updated At : '+ new Date(mitem.time).toLocaleString()" v-for="mitem of htp.deviceData" :key="mitem.measurement_id">
+                                <span class="m-name">{{mitem.measurement_en_name}}</span>
+                                <span class="m-value">{{mitem.measurement_value}}</span>
+                                <span class="m-unit">{{mitem.measurement_unit}}</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </button>
+            <div slot="progress-bar" style="display:none!important"></div>
+        </model-viewer>
+        <div id="hotspot-config"  v-if="visibleConfigPanel"> 
+            <div v-if="hotspots[activeSpot]">
+                <div class="config-param" ><label for="">Title</label> <input type="text" v-model="hotspots[activeSpot]['title']"></div>
+                <div class="config-param"><label for="">Content</label> <input type="text" v-model="hotspots[activeSpot]['content']"></div>
+                <div class="config-param"><label for="">hospot position</label> <input type="text"  v-model="hotspots[activeSpot]['position']"></div>
+                <div class="config-param"><label for="">camera orbit</label> <input type="text" v-model="hotspots[activeSpot]['cameraOrbit']" ></div>
+                <div class="config-param"><label for="">target position</label> <input type="text"  v-model="hotspots[activeSpot]['cameraTarget']"  ></div>
+                <div class="config-param"><label for="">target fieldOfView</label> <input type="text"  v-model="hotspots[activeSpot]['fieldOfView']"  ></div>
+               
+                <div class="config-param"><label for="">Select an device</label>
+                    <select v-model="hotspots[activeSpot].eui" @change="bindDevice">
+                        <option v-for="ditem of devices" :key="ditem.eui" :value="ditem.eui">
+                            {{ditem.eui}} - {{ditem.device_name}} 
+                            {{ditem.sensor_name}}
+                        </option>
+                    </select>
+                </div>
+                <div class="config-param"><button class="remove-hotspot danger full-width" @click="updateHotspot(activeSpot, null)">Delete Hostpot</button></div>
+            </div>
+            <div class="config-param">
+                <input id="enable-add-hostpot" type="checkbox" v-model="enableAdd"><label for="enable-add-hostpot">Enable Add Hotspot</label>
+                <input id="enable-config-hostpot" type="checkbox" v-model="enabledConfig"><label for="enable-config-hostpot">Enable Config Hotspot</label>
+            </div>
+        </div>
+        <textarea v-if="visibleConfigJSON" class="hotspots-data" :value="JSON.stringify(hotspots)"></textarea>
+       
+        <div class="model-viewer-progress" v-show="!visibleHotspots">
+            <div class="progress-bar" ><span :style="{maxWidth : progressText}"></span></div>
+            <div class="progress-value"><span>{{progressText}}</span></div>
+        </div>
+        <div class="htp-panel" v-show="visibleHotspotPanel">
+            <hotspot-panel 
+                :hotspots="hotspots"
+                :active-index="activeSpot"
+                :devices="devices"
+                v-if="visibleHotspotPanel"
+                @choosespot="chooseActiveSpot"
+            ></hotspot-panel>
+        </div>
+    </div>
+
+</body>
+<script type="module" src="./modelviewer/index.js"></script>
+ 
+</html>
